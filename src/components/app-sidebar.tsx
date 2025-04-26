@@ -37,7 +37,6 @@ const navData = {
       title: "Browse Cards",
       url: "/browse",
       icon: Home,
-      isActive: true, // Set the current page as active (we might need dynamic logic later)
     },
     {
       title: "My Collection",

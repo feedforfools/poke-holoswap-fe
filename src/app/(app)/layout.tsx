@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { CollectionProvider } from "@/contexts/collection-context";
 
 // This layout wraps pages within the /browse route segment
 export default function BrowseLayout({
@@ -9,9 +10,11 @@ export default function BrowseLayout({
 }) {
   return (
     // SidebarProvider manages the state (open/closed, mobile) of the sidebar
-    <SidebarProvider>
-      <AppSidebar />
-      {children}
-    </SidebarProvider>
+    <CollectionProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        {children}
+      </SidebarProvider>
+    </CollectionProvider>
   );
 }

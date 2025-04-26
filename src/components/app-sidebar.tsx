@@ -16,6 +16,7 @@ import {
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sidebar,
   SidebarContent,
@@ -98,7 +99,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain items={navData.navMain} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="flex flex-col gap-2 p-2 border-t border-sidebar-border">
+        <div className="flex items-center justify-center mt-2 mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:mb-0">
+          <ThemeToggle />
+        </div>
+        {/* Optional: Add a separator */}
+        {/* <SidebarSeparator className="my-1 group-data-[collapsible=icon]:hidden" /> */}
         <NavUser user={navData.user} />
       </SidebarFooter>
     </Sidebar>

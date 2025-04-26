@@ -45,7 +45,7 @@ export interface PaginatedCardResponse {
 
 // --- API Functions ---
 
-const DEFAULT_PAGE_SIZE = 24;
+const DEFAULT_PAGE_SIZE = 40;
 
 /**
  * Fetches a paginated list of cards.

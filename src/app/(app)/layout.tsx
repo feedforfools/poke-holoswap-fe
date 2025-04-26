@@ -1,19 +1,19 @@
-import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { CollectionProvider } from "@/contexts/collection-context";
+"use client";
 
-// This layout wraps pages within the /browse route segment
-export default function BrowseLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+import React from "react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { CollectionProvider } from "@/contexts/collection-context";
+import { ThemeProvider } from "@/components/theme-provider";
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    // SidebarProvider manages the state (open/closed, mobile) of the sidebar
     <CollectionProvider>
       <SidebarProvider>
         <AppSidebar />
-        {children}
+        <SidebarInset>
+          <main className="flex flex-1 flex-col">{children}</main>
+        </SidebarInset>
       </SidebarProvider>
     </CollectionProvider>
   );

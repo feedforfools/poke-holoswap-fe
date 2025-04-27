@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CardDisplay } from "@/components/card-display";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AdvancedPagination } from "@/components/advanced-pagination";
 
 const sortOptions = [
   { value: "name", label: "Name (A-Z)" },
@@ -38,17 +39,18 @@ const sortOptions = [
   { value: "set.releaseDate,number", label: "Set Order" },
 ];
 
+const DEFAULT_PAGE_SIZE = 40; // Define page size if not defined in api
+
 export default function BrowsePage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  // --- State for Filters/Sorting (derived from URL) ---
-  // We primarily rely on searchParams now, local state mirrors it
-  const currentQuery = searchParams?.get("q") || "";
-  const currentSet = searchParams?.get("set") || "all";
-  const currentSort = searchParams?.get("sort") || "-releaseDate";
+  // --- Read state directly from URL Search Params ---
+  const currentQuery = searchParams?.get("q") ?? "";
+  const currentSet = searchParams?.get("set") ?? "all";
+  const currentSort = searchParams?.get("sort") ?? "-releaseDate";
   const currentPage = parseInt(searchParams?.get("page") ?? "1", 10);
 
   // Local state for user input *before* debouncing/URL update
@@ -60,13 +62,14 @@ export default function BrowsePage() {
   const [isLoadingCards, setIsLoadingCards] = useState<boolean>(true);
   const [cardError, setCardError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   // State for set data
   const [availableSets, setAvailableSets] = useState<SetSummary[]>([]);
   const [isLoadingSets, setIsLoadingSets] = useState<boolean>(true);
   const [setError, setSetError] = useState<string | null>(null);
 
-  // Ref to track if it's the initial mount to prevent unnecessary URL updates
+  // Ref to track initial mount to avoid effects firing too early
   const isInitialMount = useRef(true);
 
   // --- Fetch Sets (Runs once) ---
@@ -90,52 +93,32 @@ export default function BrowsePage() {
     loadSets();
   }, []);
 
-  // --- URL Update Logic (Triggered by filter/sort/search changes) ---
-  const updateUrlParams = useCallback(
-    (newSet: string, newSort: string, newSearch: string) => {
-      console.log("Callback: updateUrlParams called");
-      const params = new URLSearchParams(searchParams?.toString());
-
-      // Update params based on new values
-      if (newSearch) params.set("q", newSearch);
-      else params.delete("q");
-      if (newSet !== "all") params.set("set", newSet);
-      else params.delete("set");
-      params.set("sort", newSort); // Always include sort
-      params.set("page", "1"); // Always reset to page 1 on filter change
-
-      // Only update if the params actually changed
-      if (
-        params.toString() !==
-        new URLSearchParams(searchParams?.toString()).toString()
-      ) {
-        console.log("Updating URL with params:", params.toString());
-        startTransition(() => {
-          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-        });
-      } else {
-        console.log("URL params haven't changed, skipping router update.");
-      }
-    },
-    [pathname, router, searchParams]
-  );
-
-  // --- Effect to trigger URL update when debounced search, set, or sort change ---
+  // --- Sync Local Search Input with URL on initial load or external change ---
   useEffect(() => {
-    console.log(
-      `Effect: Filter/Sort change detected. DebouncedSearch: ${debouncedSearchTerm}, Set: ${currentSet}, Sort: ${currentSort}`
-    );
-    if (isInitialMount.current) {
-      // On initial mount, ensure local search input matches URL query
-      if (currentQuery !== searchInput) {
-        setSearchInput(currentQuery);
-      }
-      console.log("Skipping URL update on initial mount effect run.");
-      return;
+    // Only run after initial mount effects have settled
+    if (!isInitialMount.current && searchInput !== currentQuery) {
+      setSearchInput(currentQuery);
     }
-    // Call the memoized function to update URL
-    updateUrlParams(currentSet, currentSort, debouncedSearchTerm);
-  }, [debouncedSearchTerm, currentSet, currentSort, updateUrlParams]); // Watch the *debounced* term and current URL values for set/sort
+  }, [currentQuery]); // Watch only the URL query param
+
+  // --- Effect to Update URL When Debounced Search Term Changes ---
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return; // Skip on initial mount
+    }
+    console.log(`Effect: Debounced search changed to: ${debouncedSearchTerm}`);
+    const params = new URLSearchParams(searchParams?.toString());
+    if (debouncedSearchTerm) {
+      params.set("q", debouncedSearchTerm);
+    } else {
+      params.delete("q");
+    }
+    params.set("page", "1"); // Reset page on new search
+
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  }, [debouncedSearchTerm]); // Only depends on debounced search term
 
   // --- Fetching Logic ---
   const loadCards = useCallback(
@@ -152,13 +135,17 @@ export default function BrowsePage() {
         const combinedQuery = queryParts.join(" ");
         const orderBy = sort || undefined;
 
+        // Assume fetchCards returns totalCount and pageSize
         const response = await fetchCards(
           page,
           combinedQuery || undefined,
           orderBy
         );
         setCards(response.data);
-        setTotalPages(Math.ceil(response.totalCount / response.pageSize));
+        // Calculate total pages based on API response
+        const pageSize = response.pageSize || DEFAULT_PAGE_SIZE;
+        setTotalPages(Math.ceil(response.totalCount / pageSize));
+        setTotalCount(response.totalCount);
       } catch (err) {
         console.error("Failed to load cards:", err);
         setCardError(
@@ -171,83 +158,91 @@ export default function BrowsePage() {
         console.log("Finished loading cards.");
       }
     },
-    []
+    [] // No dependencies needed here for the function itself
   );
 
-  // --- Effect to Load Data Based on URL Params ---
+  // --- Effect to Load Cards Based on URL Params ---
   useEffect(() => {
-    console.log(
-      "Effect: searchParams change detected",
-      searchParams?.toString()
-    );
-
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-    }
     // Read current params from the URL *every time* it changes
     const queryParam = searchParams?.get("q") ?? "";
     const setParam = searchParams?.get("set") ?? "all";
     const sortParam = searchParams?.get("sort") ?? "-releaseDate";
     const pageParam = parseInt(searchParams?.get("page") ?? "1", 10);
 
-    // Sync local search input only if URL differs and it's not actively being typed/debounced
-    // This prevents the URL update effect from fighting with user input
-    if (queryParam !== debouncedSearchTerm && queryParam !== searchInput) {
-      console.log(`Syncing searchInput from URL: ${queryParam}`);
-      setSearchInput(queryParam);
-    }
+    console.log(
+      "Effect: searchParams change detected, loading cards...",
+      searchParams?.toString()
+    );
 
     // Load cards based on current URL state
     loadCards(pageParam, queryParam, setParam, sortParam);
-  }, [searchParams, loadCards, debouncedSearchTerm, searchInput]);
 
-  // --- Event Handlers for Selects/Inputs ---
-  const handleSetChange = (value: string) => {
-    updateUrlParams(value, currentSort, currentQuery);
+    // Mark initial mount as complete after the first run
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, [searchParams, loadCards]); // Trigger ONLY when searchParams change
+
+  // --- Event Handlers for Filters/Sort ---
+  const handleFilterOrSortChange = (type: "set" | "sort", value: string) => {
+    const params = new URLSearchParams(searchParams?.toString());
+    if (type === "set") {
+      if (value !== "all") params.set("set", value);
+      else params.delete("set");
+    } else if (type === "sort") {
+      params.set("sort", value);
+    }
+    params.set("page", "1"); // Reset page on filter/sort change
+
+    startTransition(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
   };
 
-  const handleSortChange = (value: string) => {
-    updateUrlParams(currentSet, value, currentQuery);
-  };
+  const handleSetChange = (value: string) =>
+    handleFilterOrSortChange("set", value);
+  const handleSortChange = (value: string) =>
+    handleFilterOrSortChange("sort", value);
 
+  // Local input change handler
   const handleSearchInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    // Update the *local* input state immediately
     setSearchInput(event.target.value);
-    // The useEffect watching debouncedSearchTerm will handle the URL update
+    // The useEffect watching debouncedSearchTerm handles the rest
   };
 
   // --- Pagination Handlers ---
   const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+
     const params = new URLSearchParams(searchParams?.toString());
     params.set("page", String(newPage));
     console.log(`Pagination: Updating page to ${newPage}`);
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`, { scroll: false }); // Use push for pagination history
+      // Use push for pagination history, but replace might be smoother if desired
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     });
   };
-  const handlePreviousPage = () =>
-    handlePageChange(Math.max(1, currentPage - 1));
-  const handleNextPage = () =>
-    handlePageChange(Math.min(totalPages, currentPage + 1));
 
-  // Function to render skeleton placeholders
+  // --- Skeleton Rendering ---
   const renderSkeletons = (count: number) => {
     return Array.from({ length: count }).map((_, index) => (
       <div key={`skeleton-${index}`} className="flex flex-col space-y-2">
-        <Skeleton className="aspect-[5/7] w-full" /> {/* Image area */}
+        <Skeleton className="aspect-[2.5/3.5] w-full max-w-48 mx-auto" />{" "}
+        {/* Image area */}
       </div>
     ));
   };
 
-  const showInitialLoading =
-    (isLoadingSets || isLoadingCards) && cards.length === 0 && !cardError;
+  // Determine initial loading state
+  const showInitialLoading = isLoadingCards && cards.length === 0 && !cardError;
 
   return (
     <div className="flex flex-1 flex-col h-full">
       {/* Page-specific Header */}
       <div className="flex flex-col md:flex-row h-auto md:h-16 shrink-0 items-center justify-between gap-3 border-b bg-background px-4 py-2 md:py-0 sticky top-0 z-10">
+        {/* ... (Header content remains the same) ... */}
         <div className="flex items-center gap-2 w-full md:w-auto self-start md:self-center">
           <SidebarTrigger className="-ml-1 md:hidden" />
           <h1 className="text-lg font-semibold ml-2 md:ml-0 flex-1 md:flex-initial">
@@ -259,14 +254,13 @@ export default function BrowsePage() {
           <Select
             value={currentSet}
             onValueChange={handleSetChange}
-            disabled={isLoadingSets}
+            disabled={isLoadingSets || isPending}
           >
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue
                 placeholder={isLoadingSets ? "Loading Sets..." : "Select Set"}
               />
             </SelectTrigger>
-            {/* ... SelectContent for Sets ... */}
             <SelectContent>
               <SelectItem value="all">All Sets</SelectItem>
               {setError && (
@@ -282,11 +276,14 @@ export default function BrowsePage() {
             </SelectContent>
           </Select>
           {/* Sort Order */}
-          <Select value={currentSort} onValueChange={handleSortChange}>
+          <Select
+            value={currentSort}
+            onValueChange={handleSortChange}
+            disabled={isPending}
+          >
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Sort By" />
             </SelectTrigger>
-            {/* ... SelectContent for Sort ... */}
             <SelectContent>
               {sortOptions.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
@@ -302,8 +299,9 @@ export default function BrowsePage() {
               type="search"
               placeholder="Search name..."
               className="w-full rounded-lg bg-muted pl-8 md:w-[200px] lg:w-auto"
-              value={searchInput} // Bind to local input state
-              onChange={handleSearchInputChange} // Use specific handler
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              disabled={isPending}
             />
           </div>
         </div>
@@ -313,7 +311,7 @@ export default function BrowsePage() {
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {showInitialLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-10 gap-5">
-            {renderSkeletons(40)}
+            {renderSkeletons(DEFAULT_PAGE_SIZE)} {/* Render full page */}
           </div>
         ) : cardError ? (
           <div className="text-red-600 text-center py-10">
@@ -327,39 +325,35 @@ export default function BrowsePage() {
           <>
             {/* Card Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-10 gap-4">
-              {cards.map((card) => (
-                <CardDisplay key={card.id} card={card} />
-              ))}
+              {/* Show skeletons overlayed if loading/pending */}
+              {
+                (isLoadingCards || isPending) &&
+                  cards.length > 0 &&
+                  renderSkeletons(cards.length) // Render skeletons matching current card count for smoother transition
+              }
+              {/* Show actual cards when not loading */}
+              {!(isLoadingCards || isPending) &&
+                cards.length > 0 &&
+                cards.map((card) => <CardDisplay key={card.id} card={card} />)}
             </div>
-            {/* Loading indicator */}
+
+            {/* Loading indicator (optional, skeletons provide visual feedback) */}
             {(isLoadingCards || isPending) && cards.length > 0 && (
               <div className="text-center text-muted-foreground py-4">
                 Loading...
               </div>
             )}
-            {/* Pagination */}
-            {!isLoadingCards && !isPending && totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-4 mt-6 pb-4">
-                <Button
-                  variant="outline"
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1 || isLoadingCards || isPending}
-                >
-                  Prev
-                </Button>
-                <span suppressHydrationWarning>
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={handleNextPage}
-                  disabled={
-                    currentPage === totalPages || isLoadingCards || isPending
-                  }
-                >
-                  Next
-                </Button>
-              </div>
+
+            {/* --- Shadcn Pagination --- */}
+            {!isLoadingCards && totalCount > DEFAULT_PAGE_SIZE && (
+              <AdvancedPagination
+                currentPage={currentPage}
+                totalCount={totalCount} // Pass total item count
+                pageSize={DEFAULT_PAGE_SIZE} // Pass page size used
+                onPageChange={handlePageChange}
+                className="mt-6 pb-4"
+                // siblingCount={1} // Optional: defaults to 1
+              />
             )}
           </>
         )}

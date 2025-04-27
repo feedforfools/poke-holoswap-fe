@@ -86,7 +86,7 @@ export function CardDisplay({ card, showActions = true }: CardDisplayProps) {
         <div className="absolute inset-0 flex flex-col justify-end p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           {/* Optional: Card Name on Overlay */}
           <p className="text-white text-xs font-semibold truncate mb-1">
-            {card.name}
+            {card.set.name}
           </p>
 
           {/* Action Buttons */}

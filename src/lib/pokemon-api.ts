@@ -1,5 +1,6 @@
 import pokemon from "pokemontcgsdk";
 import { PokemonTCG } from "pokemontcgsdk";
+import { API_PAGE_SIZE } from "@/lib/constants";
 
 const POKEMON_TCG_API_KEY = process.env.NEXT_PUBLIC_POKEMON_TCG_API_KEY;
 
@@ -22,28 +23,42 @@ export interface CardSet {
   id: string;
   name: string;
   series: string;
-  // Add other set fields if needed
+  printedTotal: number;
+  total: number;
+  legalities?: {
+    unlimited?: string;
+    standard?: string;
+    expanded?: string;
+  };
+  ptcgoCode?: string;
+  releaseDate: string;
+  updatedAt: string;
+  images?: {
+    symbol: string;
+    logo: string;
+  };
 }
 
-// Interface for the data we need for list/grid display
 export interface CardSummary {
   id: string;
   name: string;
+  number: string;
   images: CardImage;
   set: CardSet;
-  // Add other summary fields if needed (e.g., rarity, types)
 }
 
 export interface SetSummary {
   id: string;
   name: string;
-  releaseDate: string; // Useful for sorting
-  // Add other fields if needed (e.g., series)
+  releaseDate: string;
+  series: string;
+  printedTotal: number;
+  total: number;
+  images: { symbol: string; logo: string };
 }
 
-// Interface representing the structure of the API response for 'where' queries
 export interface PaginatedCardResponse {
-  data: CardSummary[]; // Using our defined CardSummary type
+  data: CardSummary[];
   page: number;
   pageSize: number;
   count: number; // Number of items on the current page
@@ -51,8 +66,6 @@ export interface PaginatedCardResponse {
 }
 
 // --- API Functions ---
-
-const DEFAULT_PAGE_SIZE = 40;
 
 /**
  * Fetches a paginated list of cards.
@@ -73,7 +86,7 @@ export const fetchCards = async (
   );
   const params: PokemonTCG.Parameter = {
     page: page,
-    pageSize: DEFAULT_PAGE_SIZE,
+    pageSize: API_PAGE_SIZE,
   };
   if (query) {
     params.q = query;
@@ -85,16 +98,22 @@ export const fetchCards = async (
   try {
     const response = (await pokemon.card.where(
       params
-    )) as PaginatedCardResponse;
+    )) as PaginatedCardResponse; // Cast to our defined response type
     console.log(
       `Fetched ${response.data.length} cards. Total: ${response.totalCount}`
     );
+
     return response;
   } catch (error) {
     console.error("Error fetching cards:", error);
-    // Add more specific error handling if needed
     if (error instanceof Error) {
-      console.error("API Error Details:", (error as any).response?.data);
+      // Attempt to log more specific API error details if available
+      try {
+        const errorDetails = (error as any).response?.data || error.message;
+        console.error("API Error Details:", errorDetails);
+      } catch (e) {
+        console.error("Could not parse error details.");
+      }
     }
     throw new Error("Failed to fetch cards from API.");
   }
@@ -102,18 +121,16 @@ export const fetchCards = async (
 
 /**
  * Fetches details for a single card by its ID.
- * @param id - The unique ID of the card (e.g., 'base1-4').
- * @returns A Promise resolving to the detailed card data.
+ * @param id - The ID of the card to fetch.
+ * @return A Promise resolving to the card details.
  */
 export const fetchCardById = async (id: string): Promise<CardSummary> => {
-  // Using CardSummary for now, could be a more detailed type later
   console.log(`Fetching card details for ID: ${id}`);
   try {
-    // Use the SDK's 'find' method
-    // The SDK's 'find' returns just the card data object directly under a 'data' key
+    // The SDK's 'find' method should also return the full nested set info
     const response = await pokemon.card.find(id);
     console.log(`Fetched details for card: ${response.name}`);
-    return response as CardSummary; // Cast to our type
+    return response as CardSummary; // Cast to our type which includes the updated CardSet
   } catch (error) {
     console.error(`Error fetching card ${id}:`, error);
     throw new Error(`Failed to fetch card ${id}.`);
@@ -127,12 +144,16 @@ export const fetchCardById = async (id: string): Promise<CardSummary> => {
 export const fetchSets = async (): Promise<SetSummary[]> => {
   console.log("Fetching all sets...");
   try {
-    // The 'all' method might automatically handle pagination internally
-    // Default sort might be release date ascending, which is fine
-    const sets = await pokemon.set.all(); // Use default parameters for 'all'
-    console.log(`Fetched ${sets.length} sets.`);
-    sets.sort((a, b) => a.name.localeCompare(b.name));
-    return sets as SetSummary[];
+    // Fetch all sets - this returns the Set objects directly
+    const setsData = await pokemon.set.all(); // Use default parameters for 'all'
+    console.log(`Fetched ${setsData.length} sets.`);
+
+    // Sort sets alphabetically by name for the dropdown display consistency
+    const sortedSets = setsData.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Map or Cast to our SetSummary type if needed (adjust fields based on SDK return)
+    // Often the direct return matches SetSummary closely enough, but check SDK docs if unsure.
+    return sortedSets as SetSummary[];
   } catch (error) {
     console.error("Error fetching sets:", error);
     throw new Error("Failed to fetch sets from API.");

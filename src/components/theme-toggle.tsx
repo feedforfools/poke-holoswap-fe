@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function ThemeToggle() {

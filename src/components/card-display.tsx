@@ -41,15 +41,18 @@ export function CardDisplay({ card, showActions = true }: CardDisplayProps) {
   // --- Button Click Handlers (Simplified logic for toggle) ---
   const handleOwnClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    owned ? removeOwnedCard(card.id) : addOwnedCard(card);
+    if (owned) removeOwnedCard(card.id);
+    else addOwnedCard(card);
   };
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    double ? removeDoubleCard(card.id) : addDoubleCard(card);
+    if (double) removeDoubleCard(card.id);
+    else addDoubleCard(card);
   };
   const handleWishClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    wishlist ? removeWishlistCard(card.id) : addWishlistCard(card);
+    if (wishlist) removeWishlistCard(card.id);
+    else addWishlistCard(card);
   };
 
   return (

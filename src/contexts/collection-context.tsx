@@ -113,7 +113,7 @@ export const CollectionProvider: React.FC<CollectionProviderProps> = ({
       // If size is same, still need to check content potentially, or just save current doubles
       saveCollectionToStorage(STORAGE_KEYS.DOUBLES, doubleCards);
     }
-  }, [ownedCards]);
+  }, [ownedCards, doubleCards]);
 
   // Separate effect for doubles if direct updates happen
   useEffect(() => {

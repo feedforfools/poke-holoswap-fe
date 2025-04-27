@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 /**
  * Basic type declarations for the pokemontcgsdk module to make it work with TypeScript.
  * This file tells TypeScript that the module exists and provides

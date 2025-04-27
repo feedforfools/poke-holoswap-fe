@@ -8,11 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import {
-  fetchCards,
-  CardSummary,
-  PaginatedCardResponse,
-} from "@/lib/pokemon-api";
+import { fetchCards, CardSummary } from "@/lib/pokemon-api";
 import { CardPageLayout } from "@/components/card-page-layout";
 import { useAvailableSets } from "@/hooks/use-available-sets";
 import { browseSortOptions } from "@/lib/card-utils";
@@ -51,7 +47,7 @@ export default function BrowsePage() {
       setIsLoadingCards(true);
       setCardError(null);
       try {
-        let queryParts: string[] = [];
+        const queryParts: string[] = [];
         if (search.trim()) queryParts.push(`name:"${search.trim()}*"`);
         if (setId && setId !== "all") queryParts.push(`set.id:${setId}`);
         const combinedQuery = queryParts.join(" ") || undefined;
@@ -129,6 +125,8 @@ export default function BrowsePage() {
       updateUrlParams({ q: value });
     }
   };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleRawSearchChange = (value: string) => {
     /* Can remain empty */
   };

@@ -109,10 +109,11 @@ export const fetchCards = async (
     if (error instanceof Error) {
       // Attempt to log more specific API error details if available
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const errorDetails = (error as any).response?.data || error.message;
         console.error("API Error Details:", errorDetails);
       } catch (e) {
-        console.error("Could not parse error details.");
+        console.error("Could not parse error details: ", e);
       }
     }
     throw new Error("Failed to fetch cards from API.");

@@ -10,7 +10,6 @@ import {
   Repeat,
   Settings,
   Package,
-  MessageSquare,
   LifeBuoy,
 } from "lucide-react";
 

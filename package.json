@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "predeploy": "npm run build",
-    "deploy": "touch ./out/.nojekyll && gh-pages -d out -t true"
+    "build:deploy": "npm run build && touch ./out/.nojekyll",
+    "deploy:gh": "gh-pages --dotfiles -d out",
+    "deploy": "npm run build:deploy && npm run deploy:gh"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.7",

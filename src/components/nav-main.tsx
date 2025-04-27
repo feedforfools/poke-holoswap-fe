@@ -20,6 +20,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   title: string;
@@ -30,6 +31,7 @@ interface NavItem {
     title: string;
     url: string;
   }[];
+  comingSoon?: boolean;
 }
 
 export function NavMain({ items }: { items: NavItem[] }) {
@@ -42,32 +44,71 @@ export function NavMain({ items }: { items: NavItem[] }) {
         {items.map((item) => {
           // Determine if the current item or one of its sub-items is active
           const isActive =
-            pathname === item.url ||
-            item.items?.some((sub) => pathname?.startsWith(sub.url)); // Basic check
+            !item.comingSoon &&
+            (pathname === item.url ||
+              item.items?.some((sub) => pathname?.startsWith(sub.url)));
+
+          const isEffectivelyDisabled = !!item.comingSoon;
 
           return (
             <Collapsible key={item.title} asChild defaultOpen={isActive}>
               <SidebarMenuItem>
+                {/* Render button differently based on disabled state */}
                 <SidebarMenuButton
-                  asChild
+                  asChild={!isEffectivelyDisabled}
                   tooltip={item.title}
                   isActive={isActive}
+                  disabled={isEffectivelyDisabled}
+                  className={cn(
+                    isEffectivelyDisabled &&
+                      "opacity-60 cursor-not-allowed hover:bg-transparent dark:hover:bg-transparent" // Add disabled styles
+                  )}
+                  // Prevent click behavior if disabled (redundant with pointer-events-none from disabled prop usually)
+                  onClick={(e) => {
+                    if (isEffectivelyDisabled) e.preventDefault();
+                  }}
+                  // Use aria-disabled for accessibility
+                  aria-disabled={isEffectivelyDisabled}
                 >
-                  <Link href={item.url}>
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </Link>
+                  {/* Conditionally render Link or a simple div/span */}
+                  {isEffectivelyDisabled ? (
+                    // Render non-interactive content when disabled
+                    <div className="flex w-full items-center gap-2">
+                      <item.icon className="size-4 shrink-0" />{" "}
+                      <span className="flex-1">{item.title}</span>
+                      {item.comingSoon && (
+                        <span className="ml-auto text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded-full group-data-[collapsible=icon]:hidden">
+                          Coming Soon
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    // Render Link when not disabled
+                    <Link href={item.url}>
+                      <item.icon className="size-4 shrink-0" />{" "}
+                      <span>{item.title}</span>
+                    </Link>
+                  )}
                 </SidebarMenuButton>
-                {item.items?.length ? (
+
+                {/* Sub-items (if any) */}
+                {item.items?.length && !isEffectivelyDisabled ? (
                   <>
-                    {/* ... Collapsible Trigger ... */}
+                    <CollapsibleTrigger
+                      asChild
+                      className="absolute right-1 top-1.5 group-data-[collapsible=icon]:hidden"
+                      disabled={isEffectivelyDisabled}
+                    >
+                      <SidebarMenuAction>
+                        <ChevronRight />
+                      </SidebarMenuAction>
+                    </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {item.items?.map((subItem) => {
-                          const isSubActive = pathname === subItem.url; // Exact match for sub-items
+                          const isSubActive = pathname === subItem.url;
                           return (
                             <SidebarMenuSubItem key={subItem.title}>
-                              {/* Pass isActive to sub-button if needed */}
                               <SidebarMenuSubButton
                                 asChild
                                 isActive={isSubActive}

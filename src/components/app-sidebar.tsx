@@ -31,7 +31,7 @@ import {
 const navData = {
   user: {
     name: "User Name",
-    email: "user@example.com",
+    email: "Prototype User",
     avatar: "/avatars/placeholder.png",
   },
   navMain: [
@@ -42,9 +42,9 @@ const navData = {
       icon: LayoutGrid,
     },
     { title: "Wishlist", url: "/wishlist", icon: Heart },
-    { title: "Trades", url: "/trades", icon: Repeat },
-    { title: "Friends", url: "/friends", icon: Users },
-    { title: "Settings", url: "/settings", icon: Settings },
+    { title: "Trades", url: "/trades", icon: Repeat, comingSoon: true },
+    { title: "Friends", url: "/friends", icon: Users, comingSoon: true },
+    { title: "Settings", url: "/settings", icon: Settings, comingSoon: true },
   ],
 };
 

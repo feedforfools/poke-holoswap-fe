@@ -9,12 +9,13 @@ import {
   Users,
   Repeat,
   Settings,
-  LifeBuoy,
-  Send,
   Package,
+  MessageSquare,
+  LifeBuoy,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
+import { NavSecondary, NavSecondaryItem } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -29,57 +30,41 @@ import {
 
 const navData = {
   user: {
-    name: "User Name", // Placeholder
-    email: "user@example.com", // Placeholder
-    avatar: "/avatars/placeholder.png", // Placeholder
+    name: "User Name",
+    email: "user@example.com",
+    avatar: "/avatars/placeholder.png",
   },
   navMain: [
-    {
-      title: "Browse Cards",
-      url: "/browse",
-      icon: Home,
-    },
+    { title: "Browse Cards", url: "/browse", icon: Home },
     {
       title: "My Collection",
-      url: "/collection", // Placeholder URL
+      url: "/collection",
       icon: LayoutGrid,
-      items: [
-        // Example sub-items (optional)
-        { title: "Owned", url: "/collection?view=owned" },
-        { title: "Doubles", url: "/collection?view=doubles" },
-      ],
     },
-    {
-      title: "Wishlist",
-      url: "/wishlist", // Placeholder URL
-      icon: Heart,
-    },
-    {
-      title: "Trades",
-      url: "/trades", // Placeholder URL
-      icon: Repeat,
-    },
-    {
-      title: "Friends",
-      url: "/friends", // Placeholder URL
-      icon: Users,
-    },
-    {
-      title: "Settings",
-      url: "/settings", // Placeholder URL
-      icon: Settings,
-    },
+    { title: "Wishlist", url: "/wishlist", icon: Heart },
+    { title: "Trades", url: "/trades", icon: Repeat },
+    { title: "Friends", url: "/friends", icon: Users },
+    { title: "Settings", url: "/settings", icon: Settings },
   ],
-  // navSecondary: [
-  //   { title: "Support", url: "#", icon: LifeBuoy },
-  //   { title: "Feedback", url: "#", icon: Send },
-  // ],
 };
+
+const FEEDBACK_URL =
+  "https://github.com/feedforfools/poke-holoswap-fe/issues/new";
+
+const navSecondaryData: NavSecondaryItem[] = [
+  {
+    title: "Feedback",
+    url: FEEDBACK_URL,
+    icon: LifeBuoy,
+    external: true,
+  },
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
+        {/* Logo/Title Link */}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
@@ -96,15 +81,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+
+      {/* Main navigation */}
+      <SidebarContent className="flex flex-col p-0">
         <NavMain items={navData.navMain} />
-      </SidebarContent>
-      <SidebarFooter className="flex flex-col gap-2 p-2 border-t border-sidebar-border">
-        <div className="flex items-center justify-center mt-2 mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:mb-0">
-          <ThemeToggle />
+        <div className="mt-auto flex flex-col">
+          <SidebarMenu className="pl-2">
+            <SidebarMenuItem>
+              <ThemeToggle />
+            </SidebarMenuItem>
+          </SidebarMenu>
+          <NavSecondary items={navSecondaryData} />
         </div>
-        {/* Optional: Add a separator */}
-        {/* <SidebarSeparator className="my-1 group-data-[collapsible=icon]:hidden" /> */}
+      </SidebarContent>
+      {/* Footer section containing Secondary Nav and User Menu */}
+      <SidebarFooter className="p-2 border-t border-sidebar-border">
         <NavUser user={navData.user} />
       </SidebarFooter>
     </Sidebar>
